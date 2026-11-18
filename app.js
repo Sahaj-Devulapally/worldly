@@ -38,6 +38,7 @@ function defaultState() {
 }
 function save() {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { toast('Could not save progress'); }
+  if (typeof scheduleSync === 'function') scheduleSync();
 }
 let state = loadState();
 
@@ -507,14 +508,15 @@ function renderSettings() {
   const perMode = MODE_KEYS.map(m => ({ m, ...deckStats('all', m) }));
   app.innerHTML = `
     <h1>Settings</h1>
-    <p class="sub">Progress is saved on this device.</p>
+    <p class="sub">${typeof auth !== 'undefined' && auth ? 'Progress syncs across your devices.' : 'Progress is saved on this device.'}</p>
     <div class="list">
       <label class="setting"><div class="txt">Always multiple choice<small>Never switch to typed answers, even for cards you know well.</small></div><input type="checkbox" class="switch" id="alwaysChoices" ${state.settings.alwaysChoices ? 'checked' : ''}></label>
     </div>
     <h2>Progress by mode</h2>
     <div class="list">${perMode.map(p => `<div class="setting"><div class="txt">${esc(MODES[p.m].label)}<small>${p.mastered} mastered · ${p.seen - p.mastered} learning · ${p.unseen} new</small></div><div style="width:80px" class="bar"><span style="width:${Math.round(p.mastered / p.total * 100)}%"></span></div></div>`).join('')}</div>
-    <h2>Move progress between devices</h2>
-    <p class="muted small" style="margin-top:-4px">Your laptop and phone keep separate progress. Export a backup file here and import it on the other device.</p>
+    ${typeof syncSectionHtml === 'function' ? syncSectionHtml() : ''}
+    <h2>Backup</h2>
+    <p class="muted small" style="margin-top:-4px">Save your progress to a file, or load it from one. Loading combines it with the progress on this device.</p>
     <div class="stack">
       <button class="btn block" id="export">Export progress</button>
       <button class="btn block" id="import">Import progress…</button>
@@ -523,6 +525,7 @@ function renderSettings() {
     <h2>Danger zone</h2>
     <button class="btn block danger" id="reset">Reset all progress</button>
     <p class="muted small" style="margin-top:24px">${st.seen} of ${st.total} cards started. Data: world-countries (ODbL). Flags: flag-icons (MIT).</p>`;
+  if (typeof bindSyncSection === 'function') bindSyncSection();
   $('#alwaysChoices').onchange = e => { state.settings.alwaysChoices = e.target.checked; save(); };
   $('#export').onclick = () => {
     const blob = new Blob([JSON.stringify({ app: 'worldly', v: 1, exported: new Date().toISOString(), state })], { type: 'application/json' });
@@ -538,20 +541,16 @@ function renderSettings() {
     try {
       const data = JSON.parse(await f.text());
       if (data.app !== 'worldly' || !data.state || !data.state.cards) throw new Error('bad file');
-      if (!confirm('Merge this backup with the progress on this device? For each card, the more advanced version is kept.')) return;
-      for (const [k, v] of Object.entries(data.state.cards)) {
-        const mine = state.cards[k];
-        if (!mine || v.b > mine.b || (v.b === mine.b && v.last > (mine.last || 0))) state.cards[k] = v;
-      }
-      for (const [d, n] of Object.entries(data.state.history || {})) state.history[d] = Math.max(state.history[d] || 0, n);
-      if (data.state.streak && (!state.streak.last || data.state.streak.last > state.streak.last)) state.streak = data.state.streak;
+      if (!confirm('Combine this backup with the progress on this device? For each card, the most recent answer is kept.')) return;
+      state = mergeStates(state, data.state);
       save(); toast('Progress imported'); renderSettings();
     } catch (err) { toast('That file is not a Worldly backup'); }
   };
   $('#reset').onclick = () => {
-    if (!confirm('Erase all progress on this device? This cannot be undone.')) return;
+    const synced = typeof auth !== 'undefined' && auth;
+    if (!confirm(synced ? 'Erase all progress on all your synced devices? This cannot be undone.' : 'Erase all progress on this device? This cannot be undone.')) return;
     const settings = state.settings;
-    state = defaultState(); state.settings = settings; save(); toast('Progress reset'); renderSettings();
+    state = defaultState(); state.settings = settings; state.resetAt = Date.now(); save(); toast('Progress reset'); renderSettings();
   };
 }
 

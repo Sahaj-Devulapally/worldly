@@ -238,7 +238,7 @@ function finishMapQuiz(reason) {
   const prev = state.mapBest[key];
   const score = mq.found.length;
   const isBest = score > 0 && (!prev || score > prev.score || (score === prev.score && secs < prev.secs));
-  if (isBest) { state.mapBest[key] = { score, total: mq.codes.size, secs }; save(); }
+  if (isBest) { state.mapBest[key] = { score, total: mq.codes.size, secs, at: Date.now() }; save(); }
   mq.result = { reason, secs, best: isBest };
   renderMapQuiz();
   window.scrollTo(0, 0);

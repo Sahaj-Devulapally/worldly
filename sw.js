@@ -1,10 +1,10 @@
 // Service worker: caches the whole app (including every flag) so it works offline.
 // Bump VERSION whenever you change any file, so phones pick up the new version.
-const VERSION = 'worldly-v4';
+const VERSION = 'worldly-v5';
 importScripts('data.js'); // defines COUNTRIES
 
 const CORE = [
-  './', 'index.html', 'styles.css', 'app.js', 'data.js', 'map.js', 'mapquiz.js',
+  './', 'index.html', 'styles.css', 'app.js', 'data.js', 'map.js', 'mapquiz.js', 'config.js', 'sync.js',
   'facts/africa.js', 'facts/asia-oceania.js', 'facts/europe-americas.js', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
   'icons/apple-touch-icon.png', 'icons/favicon-32.png',
@@ -27,6 +27,7 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  if (new URL(e.request.url).origin !== location.origin) return; // e.g. sync requests: always go to the network
   e.respondWith(
     caches.match(e.request, { ignoreSearch: true }).then(hit => hit || fetch(e.request).then(res => {
       if (res.ok && new URL(e.request.url).origin === location.origin) {
