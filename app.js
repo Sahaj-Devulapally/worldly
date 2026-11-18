@@ -561,6 +561,16 @@ document.addEventListener('keydown', e => {
 
 /* ---------------- boot ---------------- */
 // render() is called from index.html once mapquiz.js has loaded.
+let reloadedForUpdate = false;
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  // When a new version takes over, reload once so you see it right away
+  // (but not in the middle of a study session or map quiz).
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloadedForUpdate) return;
+    if (session || (typeof mq !== 'undefined' && mq)) { toast('Update ready — it will apply next time you open the app'); return; }
+    reloadedForUpdate = true;
+    location.reload();
+  });
 }
