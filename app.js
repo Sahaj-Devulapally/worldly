@@ -262,12 +262,12 @@ function renderHome() {
     return `<button class="region ${r === 'all' ? 'all' : ''}" data-region="${esc(r)}">
       <div class="rn">${esc(label)}</div>
       <div class="bar"><span style="width:${p}%"></span></div>
-      <div class="rm"><span>${p}% mastered</span>${st.due ? `<span class="due">${st.due} due${st.unseen ? ` · ${st.unseen} new` : ''}</span>` : st.unseen ? `<span>${st.unseen} new</span>` : '<span>✓ done</span>'}</div>
+      <div class="rm"><span>${p}% mastered</span>${st.due + st.unseen ? `<span class="due">${st.due + st.unseen} to study</span>` : '<span>✓ done</span>'}</div>
     </button>`;
   };
 
   const todo = all.due + all.unseen;
-  const cta = todo ? `Start · ${todo} card${todo === 1 ? '' : 's'} (${all.due} due, ${all.unseen} new)` : 'All caught up · practise anyway';
+  const cta = todo ? `Start · ${todo} card${todo === 1 ? '' : 's'} to study` : 'All caught up · practise anyway';
 
   app.innerHTML = `
     <div class="topline">
@@ -278,7 +278,7 @@ function renderHome() {
       <div class="row"><div><div class="big">${pct}%</div><div class="muted small">of all ${overall.total} cards mastered</div></div></div>
       <div class="bar"><span style="width:${pct}%"></span></div>
       <div class="stats3">
-        <div><b>${overall.due}</b><span>due now</span></div>
+        <div><b>${overall.due + overall.unseen}</b><span>to study</span></div>
         <div><b>${overall.seen}</b><span>cards started</span></div>
         <div><b>${doneToday}</b><span>answers today</span></div>
       </div>
@@ -428,6 +428,7 @@ function answer(correct, info) {
   fb.innerHTML = `<div class="feedback ${correct ? 'good' : 'bad'}">
     <div class="verdict">${verdict}</div>
     ${factHtml(q.c)}
+    ${correct ? didYouKnow(q.c) : ''}
     <button class="btn ${correct ? '' : 'primary'} block" id="next">Continue</button>
   </div>`;
   const next = $('#next');
@@ -436,6 +437,16 @@ function answer(correct, info) {
   fb.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 function advance() { if (session && session.answered) { session.answered = false; nextQuestion(); } }
+// Rotate through each country's facts so a different one shows each time.
+function didYouKnow(c) {
+  const list = (self.FACTS || {})[c.code];
+  if (!list || !list.length) return '';
+  state.factIdx = state.factIdx || {};
+  const i = (state.factIdx[c.code] || 0) % list.length;
+  state.factIdx[c.code] = i + 1;
+  save();
+  return `<div class="dyk"><div class="dyk-h">💡 Did you know?</div>${esc(list[i])}</div>`;
+}
 function pickPraise() { const p = ['Correct!', 'Nice!', 'Spot on!', 'Yes!', 'Great!']; return p[Math.floor(Math.random() * p.length)]; }
 
 function renderSummary() {

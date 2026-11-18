@@ -262,3 +262,7 @@ h2 { font-size: 18px; margin: 24px 0 10px; }
 .foundlist { display: flex; flex-wrap: wrap; gap: 6px; }
 .fchip { display: inline-flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 99px; padding: 4px 10px 4px 6px; font-size: 14px; }
 .mq-result { margin-top: 12px; }
+
+/* ---- did you know ---- */
+.dyk { margin-top: 12px; background: var(--accent-soft); border-radius: 12px; padding: 12px 14px; line-height: 1.45; }
+.dyk-h { font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); margin-bottom: 4px; }

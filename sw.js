@@ -1,10 +1,11 @@
 // Service worker: caches the whole app (including every flag) so it works offline.
 // Bump VERSION whenever you change any file, so phones pick up the new version.
-const VERSION = 'worldly-v3';
+const VERSION = 'worldly-v4';
 importScripts('data.js'); // defines COUNTRIES
 
 const CORE = [
-  './', 'index.html', 'styles.css', 'app.js', 'data.js', 'map.js', 'mapquiz.js', 'manifest.webmanifest',
+  './', 'index.html', 'styles.css', 'app.js', 'data.js', 'map.js', 'mapquiz.js',
+  'facts/africa.js', 'facts/asia-oceania.js', 'facts/europe-americas.js', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
   'icons/apple-touch-icon.png', 'icons/favicon-32.png',
 ];
