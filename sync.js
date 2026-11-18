@@ -212,7 +212,10 @@ function syncSectionHtml() {
     <p class="muted small" style="margin-top:-4px">Sign in with the same account on your laptop and phone to keep progress in sync. First time? Choose "Create account".</p>
     <form class="stack" id="signInForm">
       <input class="search" id="syncEmail" type="email" inputmode="email" placeholder="Email" autocomplete="username" required>
-      <input class="search" id="syncPass" type="password" placeholder="Password (at least 6 characters)" autocomplete="current-password" minlength="6" required>
+      <div class="pwwrap">
+        <input class="search" id="syncPass" type="password" placeholder="Password (at least 6 characters)" autocomplete="current-password" minlength="6" required>
+        <button type="button" class="pwtoggle" id="pwToggle" aria-label="Show password" aria-pressed="false">Show</button>
+      </div>
       <button class="btn primary block" type="submit" data-act="in">Sign in</button>
       <button class="btn block" type="submit" data-act="up">Create account</button>
     </form>`;
@@ -235,6 +238,15 @@ function bindSyncSection() {
     return;
   }
   const form = b('signInForm');
+  b('pwToggle').onclick = () => {
+    const input = b('syncPass'), btn = b('pwToggle');
+    const show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    btn.textContent = show ? 'Hide' : 'Show';
+    btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+    btn.setAttribute('aria-pressed', String(show));
+    input.focus();
+  };
   form.onsubmit = async e => {
     e.preventDefault();
     const act = (e.submitter && e.submitter.dataset.act) || 'in';

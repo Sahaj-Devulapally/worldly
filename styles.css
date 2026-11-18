@@ -266,3 +266,9 @@ h2 { font-size: 18px; margin: 24px 0 10px; }
 /* ---- did you know ---- */
 .dyk { margin-top: 12px; background: var(--accent-soft); border-radius: 12px; padding: 12px 14px; line-height: 1.45; }
 .dyk-h { font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); margin-bottom: 4px; }
+
+/* ---- password show/hide ---- */
+.pwwrap { position: relative; }
+.pwwrap .search { margin-bottom: 0; padding-right: 72px; }
+.pwtoggle { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: 0; color: var(--accent); font-weight: 600; font-size: 14px; padding: 8px 10px; border-radius: 8px; }
+.pwtoggle:hover { background: var(--surface-2); }

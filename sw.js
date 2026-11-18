@@ -1,6 +1,6 @@
 // Service worker: caches the whole app (including every flag) so it works offline.
 // Bump VERSION whenever you change any file, so phones pick up the new version.
-const VERSION = 'worldly-v5';
+const VERSION = 'worldly-v6';
 importScripts('data.js'); // defines COUNTRIES
 
 const CORE = [
