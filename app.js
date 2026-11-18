@@ -21,8 +21,6 @@ const INTERVALS = [0, 1 * DAY, 2 * DAY, 4 * DAY, 8 * DAY, 16 * DAY, 32 * DAY, 64
 const MAX_BOX = INTERVALS.length - 1;
 const MASTERED_BOX = 4;   // 8+ day interval = mastered
 const TYPE_FROM_BOX = 3;  // switch from multiple choice to typing at this box
-const SESSION_SIZE = 15;
-const NEW_PER_SESSION = 8;
 
 const BY_CODE = Object.fromEntries(COUNTRIES.map(c => [c.code, c]));
 const STORE_KEY = 'worldly.v1';
@@ -175,29 +173,15 @@ function buildSession(region, modeSel) {
       else rest.push({ ...item, b: s.b, due: s.due });
     }
   }
-  due.sort((a, b) => a.due - b.due);
-  let items = due.slice(0, SESSION_SIZE);
-  if (items.length < SESSION_SIZE) {
-    // Introduce new cards gradually: at most one new card per country per session,
-    // and for each country the earliest unseen mode (flag first, then capital, ...).
-    const firstNew = new Map();
-    for (const f of fresh) {
-      const cur = firstNew.get(f.code);
-      if (!cur || MODE_KEYS.indexOf(f.mode) < MODE_KEYS.indexOf(cur.mode)) firstNew.set(f.code, f);
-    }
-    const inSession = new Set(items.map(i => i.code));
-    const limit = Math.min(NEW_PER_SESSION, SESSION_SIZE - items.length);
-    const newOnes = shuffle([...firstNew.values()].filter(f => !inSession.has(f.code))).slice(0, limit);
-    items = items.concat(newOnes);
-  }
+  // Every due card and every new card in the deck, in random order.
+  let items = due.concat(fresh);
   let extra = false;
   if (!items.length) {
-    // Everything is learned and nothing is due: extra practice on the weakest cards.
+    // Everything is learned and nothing is due: practise the whole deck anyway.
     extra = true;
-    rest.sort((a, b) => a.b - b.b || a.due - b.due);
-    items = rest.slice(0, SESSION_SIZE);
+    items = rest;
   }
-  return { items: shuffle(items), extra };
+  return { items: shuffle(items.map(({ code, mode }) => ({ code, mode }))), extra };
 }
 
 /* ---------------- question generation ---------------- */
@@ -241,6 +225,7 @@ const app = $('#app');
 function setTab(tab) {
   view = { tab };
   session = null;
+  if (typeof mapCleanup === 'function') mapCleanup();
   document.body.classList.remove('in-session');
   for (const b of document.querySelectorAll('.tabbar button')) b.classList.toggle('active', b.dataset.tab === tab);
   render();
@@ -254,6 +239,7 @@ $('#tabbar').addEventListener('click', e => {
 function render() {
   if (session) return renderSession();
   if (view.tab === 'study') return renderHome();
+  if (view.tab === 'map') return renderMap();
   if (view.tab === 'browse') return renderBrowse();
   if (view.tab === 'settings') return renderSettings();
 }
@@ -276,13 +262,12 @@ function renderHome() {
     return `<button class="region ${r === 'all' ? 'all' : ''}" data-region="${esc(r)}">
       <div class="rn">${esc(label)}</div>
       <div class="bar"><span style="width:${p}%"></span></div>
-      <div class="rm"><span>${p}% mastered</span>${st.due ? `<span class="due">${st.due} due</span>` : st.unseen ? `<span>${st.unseen} new</span>` : '<span>✓</span>'}</div>
+      <div class="rm"><span>${p}% mastered</span>${st.due ? `<span class="due">${st.due} due${st.unseen ? ` · ${st.unseen} new` : ''}</span>` : st.unseen ? `<span>${st.unseen} new</span>` : '<span>✓ done</span>'}</div>
     </button>`;
   };
 
-  const cta = all.due
-    ? `Review ${all.due} due card${all.due === 1 ? '' : 's'}`
-    : all.unseen ? 'Learn something new' : 'Extra practice';
+  const todo = all.due + all.unseen;
+  const cta = todo ? `Start · ${todo} card${todo === 1 ? '' : 's'} (${all.due} due, ${all.unseen} new)` : 'All caught up · practise anyway';
 
   app.innerHTML = `
     <div class="topline">
@@ -412,10 +397,11 @@ function answer(correct, info) {
   if (correct) { if (!isRetry) session.right++; }
   else {
     if (!isRetry) session.missed.push(q.c);
-    if (!isRetry) {
-      // Show it again a few cards later in this session.
+    {
+      // Show it again a few cards later in this session, until it's answered right.
       session.retried.add(cardKey(q.code, q.mode));
-      session.queue.splice(Math.min(3, session.queue.length), 0, { code: q.code, mode: q.mode });
+      const at = Math.min(session.queue.length, 3 + Math.floor(Math.random() * 6));
+      session.queue.splice(at, 0, { code: q.code, mode: q.mode });
       session.total++;
     }
   }
@@ -448,8 +434,6 @@ function answer(correct, info) {
   next.onclick = advance;
   next.focus({ preventScroll: true });
   fb.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  const token = session.q;
-  if (correct && !q.typed) setTimeout(() => { if (session && session.q === token && session.answered) advance(); }, 1100);
 }
 function advance() { if (session && session.answered) { session.answered = false; nextQuestion(); } }
 function pickPraise() { const p = ['Correct!', 'Nice!', 'Spot on!', 'Yes!', 'Great!']; return p[Math.floor(Math.random() * p.length)]; }
@@ -465,7 +449,7 @@ function renderSummary() {
     <p class="sub" style="text-align:center">${pct >= 90 ? 'Excellent work.' : pct >= 60 ? 'Good progress — missed cards come back soon.' : 'Tough round — missed cards come back soon.'}</p>
     ${missed.length ? `<h2>To review</h2><div class="list">${missed.map(c => `<div class="li">${flagImg(c.code, 'mini', '')}<div><div class="nm">${esc(c.name)}</div><div class="cp">${esc(capList(c))}</div></div></div>`).join('')}</div>` : ''}
     <div class="stack" style="margin-top:20px">
-      <button class="btn primary block" id="again">Keep going</button>
+      <button class="btn primary block" id="again">Go again</button>
       <button class="btn block" id="home">Back to home</button>
     </div>`;
   $('#again').onclick = () => startSession(session.region, session.modeSel);
@@ -576,7 +560,7 @@ document.addEventListener('keydown', e => {
 });
 
 /* ---------------- boot ---------------- */
-render();
+// render() is called from index.html once mapquiz.js has loaded.
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }

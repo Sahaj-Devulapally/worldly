@@ -1,17 +1,19 @@
 // Service worker: caches the whole app (including every flag) so it works offline.
 // Bump VERSION whenever you change any file, so phones pick up the new version.
-const VERSION = 'worldly-v1';
+const VERSION = 'worldly-v2';
 importScripts('data.js'); // defines COUNTRIES
 
 const CORE = [
-  './', 'index.html', 'styles.css', 'app.js', 'data.js', 'manifest.webmanifest',
+  './', 'index.html', 'styles.css', 'app.js', 'data.js', 'map.js', 'mapquiz.js', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
   'icons/apple-touch-icon.png', 'icons/favicon-32.png',
 ];
 const FLAGS = COUNTRIES.map(c => `flags/${c.code}.svg`);
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll([...CORE, ...FLAGS])).then(() => self.skipWaiting()));
+  // cache: 'reload' skips the browser's HTTP cache so a new version never stores stale files.
+  const reqs = [...CORE, ...FLAGS].map(u => new Request(u, { cache: 'reload' }));
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(reqs)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
